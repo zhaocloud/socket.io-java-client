@@ -8,37 +8,29 @@
  */
 package io.socket;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Properties;
-import java.util.Scanner;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.logging.Logger;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 /**
  * The Class IOConnection.
  */
 class IOConnection implements IOCallback {
 	/** Debug logger */
-	static final Logger logger = Logger.getLogger("io.socket");
+	static final Logger logger = LoggerFactory.getLogger("io.socket");
 
 	public static final String FRAME_DELIMITER = "\ufffd";
 
@@ -431,7 +423,7 @@ class IOConnection implements IOCallback {
 			else
 				connections.remove(urlStr);
 		}
-		logger.info("Cleanup");
+		logger.debug("Cleanup");
 		backgroundTimer.cancel();
 	}
 
@@ -457,10 +449,10 @@ class IOConnection implements IOCallback {
 	private synchronized void sendPlain(String text) {
 		if (getState() == STATE_READY)
 			try {
-				logger.info("> " + text);
+				logger.debug("> " + text);
 				transport.send(text);
 			} catch (Exception e) {
-				logger.info("IOEx: saving");
+				logger.debug("IOEx: saving");
 				outputBuffer.add(text);
 			}
 		else {
@@ -530,11 +522,11 @@ class IOConnection implements IOCallback {
 				// DEBUG
 				String[] texts = outputBuffer.toArray(new String[outputBuffer
 						.size()]);
-				logger.info("Bulk start:");
+				logger.debug("Bulk start:");
 				for (String text : texts) {
-					logger.info("> " + text);
+					logger.debug("> " + text);
 				}
-				logger.info("Bulk end");
+				logger.debug("Bulk end");
 				// DEBUG END
 				transport.sendBulk(texts);
 			} catch (IOException e) {
@@ -610,7 +602,7 @@ class IOConnection implements IOCallback {
 	 *            the text
 	 */
 	public void transportMessage(String text) {
-		logger.info("< " + text);
+		logger.debug("< " + text);
 		IOMessage message;
 		try {
 			message = new IOMessage(text);
@@ -676,7 +668,7 @@ class IOConnection implements IOCallback {
 									+ "Message was: " + message.toString(), e));
 				}
 			} catch (JSONException e) {
-				logger.warning("Malformated JSON received");
+				logger.warn("Malformated JSON received");
 			}
 			break;
 		case IOMessage.TYPE_EVENT:
@@ -702,7 +694,7 @@ class IOConnection implements IOCallback {
 									+ "Message was: " + message.toString(), e));
 				}
 			} catch (JSONException e) {
-				logger.warning("Malformated JSON received");
+				logger.warn("Malformated JSON received");
 			}
 			break;
 
@@ -713,7 +705,7 @@ class IOConnection implements IOCallback {
 					int id = Integer.parseInt(data[0]);
 					IOAcknowledge ack = acknowledge.get(id);
 					if (ack == null)
-						logger.warning("Received unknown ack packet");
+						logger.warn("Received unknown ack packet");
 					else {
 						JSONArray array = new JSONArray(data[1]);
 						Object[] args = new Object[array.length()];
@@ -723,9 +715,9 @@ class IOConnection implements IOCallback {
 						ack.ack(args);
 					}
 				} catch (NumberFormatException e) {
-					logger.warning("Received malformated Acknowledge! This is potentially filling up the acknowledges!");
+					logger.warn("Received malformated Acknowledge! This is potentially filling up the acknowledges!");
 				} catch (JSONException e) {
-					logger.warning("Received malformated Acknowledge data!");
+					logger.warn("Received malformated Acknowledge data!");
 				}
 			} else if (data.length == 1) {
 				sendPlain("6:::" + data[0]);
@@ -746,7 +738,7 @@ class IOConnection implements IOCallback {
 		case IOMessage.TYPE_NOOP:
 			break;
 		default:
-			logger.warning("Unkown type received" + message.getType());
+			logger.warn("Unkown type received" + message.getType());
 			break;
 		}
 	}
